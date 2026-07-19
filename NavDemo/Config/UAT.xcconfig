@@ -1,0 +1,3 @@
+API_ENVIRONMENT = uat
+PRODUCT_BUNDLE_IDENTIFIER = com.example.navdemo.uat
+APP_DISPLAY_NAME = NavDemo UAT

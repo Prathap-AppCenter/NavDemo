@@ -7,13 +7,19 @@ public final class UserRepositoryImpl: UserRepository {
     public init(network: NetworkClient) { self.network = network }
 
     public func login(email: String, password: String) async throws -> User {
-        let body = try JSONEncoder().encode(["email": email, "password": password])
-        let endpoint = Endpoint(path: "/auth/login", method: "POST",
-                                 headers: ["Content-Type": "application/json"], body: body)
         do {
+            // Login has no token yet, so requiresAuth: false — AuthTokenInterceptor
+            // will skip attaching a bearer header for this call.
+            let endpoint = Endpoint(
+                path: "/auth/login",
+                method: .post,
+                headers: ["Content-Type": "application/json"],
+                body: try JSONEncoder().encode(["email": email, "password": password]),
+                requiresAuth: false
+            )
             let dto = try await network.send(endpoint, as: UserDTO.self)
             return dto.toDomain()
-        } catch NetworkError.statusCode(401) {
+        } catch NetworkError.statusCode(401, data: _) {
             throw AuthError.invalidCredentials
         } catch {
             throw AuthError.network("\(error)")
@@ -21,9 +27,13 @@ public final class UserRepositoryImpl: UserRepository {
     }
 
     public func signup(email: String, password: String, name: String) async throws -> User {
-        let body = try JSONEncoder().encode(["email": email, "password": password, "name": name])
-        let endpoint = Endpoint(path: "/auth/signup", method: "POST",
-                                 headers: ["Content-Type": "application/json"], body: body)
+        let endpoint = Endpoint(
+            path: "/auth/signup",
+            method: .post,
+            headers: ["Content-Type": "application/json"],
+            body: try JSONEncoder().encode(["email": email, "password": password, "name": name]),
+            requiresAuth: false
+        )
         let dto = try await network.send(endpoint, as: UserDTO.self)
         return dto.toDomain()
     }

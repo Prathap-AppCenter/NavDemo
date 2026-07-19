@@ -27,6 +27,10 @@ targets:
     sources:
       - App/Sources
       - App/Resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.navdemo
+        GENERATE_INFOPLIST_FILE: NO
     dependencies:
       - package: Auth
         product: AuthPublicAPI
@@ -49,6 +53,9 @@ targets:
     platform: iOS
     sources:
       - App/Tests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.navdemo.tests
     dependencies:
       - target: NavDemo
       - package: Navigation

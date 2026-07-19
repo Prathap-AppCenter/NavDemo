@@ -1,0 +1,3 @@
+API_ENVIRONMENT = prod
+PRODUCT_BUNDLE_IDENTIFIER = com.example.navdemo
+APP_DISPLAY_NAME = NavDemo

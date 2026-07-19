@@ -8,6 +8,7 @@ let package = Package(
         .library(name: "CoreNetworking", targets: ["CoreNetworking"])
     ],
     targets: [
-        .target(name: "CoreNetworking")
+        .target(name: "CoreNetworking"),
+        .testTarget(name: "CoreNetworkingTests", dependencies: ["CoreNetworking"])
     ]
 )

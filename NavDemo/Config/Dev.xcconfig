@@ -1,0 +1,5 @@
+// Select this .xcconfig for the "Dev" build configuration in your
+// target's Build Settings (or via `xcodebuild -xcconfig Config/Dev.xcconfig`).
+API_ENVIRONMENT = dev
+PRODUCT_BUNDLE_IDENTIFIER = com.example.navdemo.dev
+APP_DISPLAY_NAME = NavDemo Dev
