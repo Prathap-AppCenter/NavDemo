@@ -1,0 +1,5 @@
+# XcodeGen / Generated projects
+*.xcodeproj/
+
+# macOS files
+.DS_Store
