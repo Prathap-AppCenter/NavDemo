@@ -1,0 +1,67 @@
+# XcodeGen spec — run `xcodegen generate` (https://github.com/yonaskolb/XcodeGen)
+# to produce NavDemo.xcodeproj without touching Xcode's project file by hand.
+# Install: brew install xcodegen
+name: NavDemo
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: "16.0"
+packages:
+  Navigation:
+    path: Packages/Navigation
+  DIContainer:
+    path: Packages/DIContainer
+  CoreNetworking:
+    path: Packages/CoreNetworking
+  Auth:
+    path: Packages/Modules/Auth
+  Home:
+    path: Packages/Modules/Home
+  Payments:
+    path: Packages/Modules/Payments
+targets:
+  # The real, full app — the only target that imports every module together.
+  NavDemo:
+    type: application
+    platform: iOS
+    sources:
+      - App/Sources
+      - App/Resources
+    dependencies:
+      - package: Auth
+        product: AuthPublicAPI
+      - package: Home
+        product: HomePublicAPI
+      - package: Payments
+        product: PaymentsPublicAPI
+      - package: DIContainer
+      - package: Navigation
+      - package: CoreNetworking
+    info:
+      path: App/Info.plist
+      properties:
+        UILaunchScreen: {}
+        CFBundleShortVersionString: "1.0"
+        CFBundleVersion: "1"
+
+  NavDemoTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - App/Tests
+    dependencies:
+      - target: NavDemo
+      - package: Navigation
+      - package: Auth
+        product: AuthPublicAPI
+      - package: Home
+        product: HomePublicAPI
+      - package: Payments
+        product: PaymentsPublicAPI
+
+  # NOTE: AuthDemoApp / HomeDemoApp / PaymentsDemoApp are executableTarget
+  # products defined INSIDE each module's own Package.swift (see
+  # Packages/Modules/*/Package.swift). Xcode surfaces them automatically
+  # as separate schemes once the package is added — no extra target
+  # entries are needed here. Just pick e.g. "AuthDemoApp" from the scheme
+  # picker after opening the generated project.

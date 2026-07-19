@@ -1,0 +1,33 @@
+# Standalone Xcode project for JUST the Home module.
+# Run from inside Packages/Modules/Home:  xcodegen generate
+name: HomeModule
+options:
+  bundleIdPrefix: com.example.home
+  deploymentTarget:
+    iOS: "16.0"
+packages:
+  # Home's own package (this folder) — pulled in as a local package.
+  # Home's own Package.swift already declares its dependency on
+  # ../../Navigation — SPM resolves that transitively, no need to
+  # re-declare it here since HomeDemoApp never imports Navigation directly.
+  Home:
+    path: .
+  DIContainer:
+    path: ../../DIContainer
+  CoreNetworking:
+    path: ../../CoreNetworking
+targets:
+  HomeDemoApp:
+    type: application
+    platform: iOS
+    sources:
+      - Sources/HomeDemoApp
+    dependencies:
+      - package: Home
+        product: HomePublicAPI
+      - package: DIContainer
+      - package: CoreNetworking
+    info:
+      path: Info.plist
+      properties:
+        UILaunchScreen: {}
