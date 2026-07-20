@@ -6,6 +6,22 @@ options:
   bundleIdPrefix: com.example
   deploymentTarget:
     iOS: "16.0"
+
+# Four real build configurations, one per environment — each backed by
+# its own .xcconfig (Config/*.xcconfig), which is what actually sets
+# API_ENVIRONMENT and PRODUCT_BUNDLE_IDENTIFIER per environment.
+configs:
+  Dev: debug
+  UAT: debug
+  QA: debug
+  Prod: release
+
+configFiles:
+  Dev: Config/Dev.xcconfig
+  UAT: Config/UAT.xcconfig
+  QA: Config/QA.xcconfig
+  Prod: Config/Prod.xcconfig
+
 packages:
   Navigation:
     path: Packages/Navigation
@@ -19,6 +35,7 @@ packages:
     path: Packages/Modules/Home
   Payments:
     path: Packages/Modules/Payments
+
 targets:
   # The real, full app — the only target that imports every module together.
   NavDemo:
@@ -29,7 +46,10 @@ targets:
       - App/Resources
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.navdemo
+        # Bundle identifier is now supplied per-environment by each
+        # Config/*.xcconfig (so Dev/UAT/QA/Prod can be installed
+        # side-by-side on one device/simulator) — do NOT hardcode
+        # PRODUCT_BUNDLE_IDENTIFIER here, it would override the xcconfig.
         GENERATE_INFOPLIST_FILE: NO
     dependencies:
       - package: Auth
@@ -66,9 +86,48 @@ targets:
       - package: Payments
         product: PaymentsPublicAPI
 
+# One scheme per environment — this is "how you change environments":
+# pick the scheme in Xcode's scheme picker (top-left, next to the
+# stop button) before hitting Run.
+schemes:
+  NavDemo-Dev:
+    build:
+      targets:
+        NavDemo: all
+    run:
+      config: Dev
+    test:
+      config: Dev
+      targets: [NavDemoTests]
+    archive:
+      config: Dev
+  NavDemo-UAT:
+    build:
+      targets:
+        NavDemo: all
+    run:
+      config: UAT
+    archive:
+      config: UAT
+  NavDemo-QA:
+    build:
+      targets:
+        NavDemo: all
+    run:
+      config: QA
+    archive:
+      config: QA
+  NavDemo-Prod:
+    build:
+      targets:
+        NavDemo: all
+    run:
+      config: Prod
+    archive:
+      config: Prod
+
   # NOTE: AuthDemoApp / HomeDemoApp / PaymentsDemoApp are executableTarget
   # products defined INSIDE each module's own Package.swift (see
   # Packages/Modules/*/Package.swift). Xcode surfaces them automatically
   # as separate schemes once the package is added — no extra target
-  # entries are needed here. Just pick e.g. "AuthDemoApp" from the scheme
-  # picker after opening the generated project.
+  # entries are needed here.

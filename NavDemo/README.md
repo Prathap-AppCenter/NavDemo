@@ -6,6 +6,66 @@ navigation, wired together by a thin App target, with dependency
 injection, push/present navigation, and deep linking all working
 end-to-end.
 
+## How to change environments (Dev / UAT / QA / Prod)
+
+Two independent ways — use either or both.
+
+### 1. Build-time: pick a scheme
+
+```bash
+xcodegen generate
+open NavDemo.xcodeproj
+```
+
+In Xcode's scheme picker (top-left, next to the stop button) there are
+four schemes: **NavDemo-Dev**, **NavDemo-UAT**, **NavDemo-QA**,
+**NavDemo-Prod**. Pick one, hit Run. Each scheme runs a different Xcode
+build **configuration** (`Dev`/`UAT`/`QA`/`Prod`), and each configuration
+is backed by its own file in `Config/` (`Dev.xcconfig`, `UAT.xcconfig`,
+etc.) that sets `API_ENVIRONMENT` and a distinct
+`PRODUCT_BUNDLE_IDENTIFIER` — so Dev/UAT/QA/Prod builds can even be
+installed side-by-side on one device/simulator without overwriting each
+other.
+
+At launch, `AppBootstrap.readBuildEnvironment()` reads `API_ENVIRONMENT`
+back out of `Info.plist` (Xcode substitutes it in from the active
+`.xcconfig` at build time) and that becomes the app's starting
+environment for that run.
+
+### 2. Runtime: the in-app switcher (Dev/UAT/QA builds only)
+
+Every non-Prod build shows a small badge in the top-right of the nav bar
+(e.g. **DEV**) — tap it to open a picker and flip between environments
+without rebuilding. This is `EnvironmentSwitcherView` from
+`CoreNetworking`, wired into `RootView.swift`.
+
+Under the hood: `DefaultNetworkClient` re-reads
+`environmentProvider.current` on **every** network call, not just at
+launch — so the switch takes effect on the very next request. The choice
+also persists (via `UserDefaults`) across app relaunches until you pick a
+different one.
+
+**This entire debug UI is compiled out of Prod builds**, not just hidden:
+`Config/Prod.xcconfig` sets a `PRODUCTION` Swift compilation flag, and
+`RootView.swift` wraps the whole switcher in `#if !PRODUCTION` — a Prod
+build's binary doesn't contain this code at all, so there's no risk of a
+tester accidentally shipping a build where the switcher is reachable in
+production.
+
+### Where each piece lives
+
+| Piece | File |
+|---|---|
+| Per-environment base URL, timeout, headers | `Packages/CoreNetworking/Sources/CoreNetworking/APIEnvironment.swift` |
+| Current-environment storage + persistence | `Packages/CoreNetworking/Sources/CoreNetworking/EnvironmentProvider.swift` |
+| Runtime switcher UI | `Packages/CoreNetworking/Sources/CoreNetworking/EnvironmentSwitcherView.swift` |
+| Reads build-time value, registers everything | `App/Sources/AppBootstrap.swift` |
+| Shows the badge + presents the switcher | `App/Sources/RootView.swift` |
+| The four environments' build settings | `Config/*.xcconfig` |
+| Configs + schemes that use them | `project.yml` (`configFiles:` and `schemes:`) |
+
+---
+
 This README explains the whole project — what each piece is for, how the
 pieces fit together, and how to actually run it.
 
@@ -200,7 +260,9 @@ public enum HomeModule: ModuleDependency {
 enum AppBootstrap {
     static func run() -> DIContainer {
         let container = DIContainer.shared
-        container.register(NetworkClient.self, instance: MockNetworkClient())
+        let environmentProvider = DefaultEnvironmentProvider(buildDefault: readBuildEnvironment())
+        container.register(EnvironmentProvider.self, instance: environmentProvider)
+        container.register(NetworkClient.self, instance: DefaultNetworkClient(environmentProvider: environmentProvider, ...))
 
         let modules: [ModuleDependency.Type] = [AuthModule.self, HomeModule.self, PaymentsModule.self]
         for module in modules {
@@ -591,10 +653,18 @@ cd NavDemo
 xcodegen generate
 open NavDemo.xcodeproj
 ```
-Select the `NavDemo` scheme, run. Log in (any email with `@`/`.`,
-password 6+ characters — there's no real backend, `MockNetworkClient`
-stands in), tap through Home, tap "Go to Checkout" to see cross-module,
-sheet-presented navigation in action.
+Pick one of the four schemes (**NavDemo-Dev**, **NavDemo-UAT**,
+**NavDemo-QA**, **NavDemo-Prod** — see "How to change environments" up
+top), run. Login now goes through a real `DefaultNetworkClient` hitting
+that environment's placeholder base URL (`api-dev.example.com`, etc.) —
+since there's no real backend behind those, login will show a network
+error, which is itself a useful demonstration that the environment
+switch is real and not just cosmetic. `Home`'s `ItemRepositoryImpl` falls
+back to sample data on any network failure, so Home still renders — tap
+"Go to Checkout" there to see cross-module, sheet-presented navigation in
+action. Swap `DefaultNetworkClient` for `MockNetworkClient` in
+`AppBootstrap.swift` if you'd rather the whole app run against canned
+responses instead.
 
 ---
 

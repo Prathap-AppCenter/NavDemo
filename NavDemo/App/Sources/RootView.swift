@@ -1,6 +1,7 @@
 import SwiftUI
 import DIContainer
 import Navigation
+import CoreNetworking
 import AuthPublicAPI
 import HomePublicAPI
 import PaymentsPublicAPI
@@ -14,6 +15,10 @@ struct RootView: View {
     private let deepLinkParsers: [DeepLinkParser] = [
         AuthDeepLinkParser(), HomeDeepLinkParser(), PaymentsDeepLinkParser()
     ]
+
+    #if !PRODUCTION
+    @State private var showingEnvironmentSwitcher = false
+    #endif
 
     var body: some View {
         NavigationStack(path: $router.path) {
@@ -30,6 +35,29 @@ struct RootView: View {
             .navigationDestination(for: AnyHashable.self) { erasedRoute in
                 buildAny(erasedRoute)
             }
+            #if !PRODUCTION
+            // Debug-only entry point to the runtime environment switcher —
+            // compiled OUT of Prod builds entirely via the PRODUCTION flag
+            // set in Config/Prod.xcconfig, not just hidden behind a toggle.
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        showingEnvironmentSwitcher = true
+                    } label: {
+                        if let provider = container.resolve(EnvironmentProvider.self) {
+                            Text(provider.current.rawValue.uppercased())
+                                .font(.caption.bold())
+                        }
+                    }
+                }
+            }
+            .sheet(isPresented: $showingEnvironmentSwitcher) {
+                if let provider = container.resolve(EnvironmentProvider.self) {
+                    EnvironmentSwitcherView(provider: provider)
+                        .presentationDetents([.height(160)])
+                }
+            }
+            #endif
         }
         .sheet(item: $router.presentedSheet) { wrapped in buildAny(wrapped.value) }
         .fullScreenCover(item: $router.presentedFullScreen) { wrapped in buildAny(wrapped.value) }
